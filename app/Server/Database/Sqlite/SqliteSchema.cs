@@ -9,7 +9,7 @@ namespace DHT.Server.Database.Sqlite;
 
 sealed class SqliteSchema
 {
-    internal const int Version = 9;
+    internal const int Version = 10;
 
     private static readonly Log Log = Log.ForType<SqliteSchema>();
 
@@ -137,6 +137,11 @@ sealed class SqliteSchema
         await conn.ExecuteAsync("CREATE INDEX reactions_message_ix ON message_reactions(message_id)");
 
         await conn.ExecuteAsync("INSERT INTO metadata (key, value) VALUES ('version', " + Version + ")");
+
+        await conn.ExecuteAsync("""
+                                    INSERT INTO users (id, name, display_name, avatar_url, discriminator)
+                                    VALUES (-1, 'Discord', 'Discord', 'https://support.discord.com/hc/user_images/PRywUXcqg0v5DD6s7C3LyQ.jpeg', '0')
+                                """);
     }
 
     internal static async Task CreateMessageEditTimestampTable(ISqliteConnection conn)
@@ -207,6 +212,7 @@ sealed class SqliteSchema
             { 6, new SqliteSchemaUpgradeTo7() },
             { 7, new SqliteSchemaUpgradeTo8() },
             { 8, new SqliteSchemaUpgradeTo9() },
+            { 9, new SqliteSchemaUpgradeTo10() },
         };
 
         var perf = Log.Start("from version " + dbVersion);

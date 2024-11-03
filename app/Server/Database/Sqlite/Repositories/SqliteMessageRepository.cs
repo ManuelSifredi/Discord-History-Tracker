@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,7 +115,16 @@ sealed class SqliteMessageRepository(SqliteConnectionPool pool, SqliteDownloadRe
 				}
 
 				if (message.RepliedToId is {} repliedToId) {
-					messageRepliedToCmd.Set(":message_id", messageId);
+					// Si el mensaje al que se le hace reply no existe, crearlo como placeholder
+                    if (!messages.Any(x => x.Id == message.RepliedToId)) {
+                        messageCmd.Set(":message_id", message.RepliedToId);
+                        messageCmd.Set(":sender_id", -1); // Discord user row
+                        messageCmd.Set(":channel_id", message.Channel);
+                        messageCmd.Set(":text", "Discord message placeholder");
+                        messageCmd.Set(":timestamp", message.Timestamp - 1);
+                        await messageCmd.ExecuteNonQueryAsync();
+                    }
+                    messageRepliedToCmd.Set(":message_id", messageId);
 					messageRepliedToCmd.Set(":replied_to_id", repliedToId);
 					await messageRepliedToCmd.ExecuteNonQueryAsync();
 				}
